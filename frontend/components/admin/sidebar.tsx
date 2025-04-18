@@ -66,14 +66,16 @@ export function AdminSidebar() {
       {/* Sidebar */}
       <aside
         className={cn(
-          "fixed inset-y-0 left-0 z-40 flex w-72 flex-col border-r bg-background transition-transform duration-300 ease-in-out md:relative md:translate-x-0",
-          sidebarOpen ? "translate-x-0" : "-translate-x-full",
+          "fixed inset-y-0 left-0 z-40 flex flex-col border-r bg-background transition-all duration-300 ease-in-out md:relative",
+          sidebarOpen ? "w-72 translate-x-0" : "w-16 -translate-x-full md:translate-x-0",
         )}
       >
         <div className="flex h-16 items-center justify-between border-b px-4">
           <Link href="/admin" className="flex items-center gap-2">
             <Heart className="h-6 w-6 text-primary" />
-            <span className={cn("font-bold text-xl", !sidebarOpen && "hidden")}>HealthCare</span>
+            <span className={cn("font-bold text-xl transition-opacity duration-200", !sidebarOpen && "md:opacity-0")}>
+              HealthCare
+            </span>
           </Link>
           <Button variant="ghost" size="icon" onClick={toggleSidebar} className="hidden md:flex">
             <ChevronLeft className={cn("h-4 w-4 transition-transform", !sidebarOpen && "rotate-180")} />
@@ -92,7 +94,7 @@ export function AdminSidebar() {
                 )}
               >
                 <link.icon className="h-5 w-5" />
-                <span className={cn(!sidebarOpen && "hidden")}>{link.title}</span>
+                <span className={cn("transition-opacity duration-200", !sidebarOpen && "md:hidden")}>{link.title}</span>
               </Link>
             ))}
           </nav>
@@ -104,11 +106,10 @@ export function AdminSidebar() {
             className="flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
           >
             <LogOut className="h-5 w-5" />
-            <span className={cn(!sidebarOpen && "hidden")}>Logout</span>
+            <span className={cn("transition-opacity duration-200", !sidebarOpen && "md:hidden")}>Logout</span>
           </Link>
         </div>
       </aside>
     </>
   )
 }
-

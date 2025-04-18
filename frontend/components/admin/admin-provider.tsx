@@ -12,10 +12,24 @@ type AdminContextType = {
 const AdminContext = createContext<AdminContextType | undefined>(undefined)
 
 export function AdminProvider({ children }: { children: React.ReactNode }) {
-  const [sidebarOpen, setSidebarOpen] = useState(true)
+  // Use localStorage to persist sidebar state if available
+  const [sidebarOpen, setSidebarOpen] = useState(() => {
+    // Check if we're in the browser and if localStorage is available
+    if (typeof window !== "undefined") {
+      const savedState = localStorage.getItem("adminSidebarOpen")
+      return savedState !== null ? savedState === "true" : true
+    }
+    return true
+  })
 
   const toggleSidebar = () => {
-    setSidebarOpen(!sidebarOpen)
+    const newState = !sidebarOpen
+    setSidebarOpen(newState)
+
+    // Save to localStorage if available
+    if (typeof window !== "undefined") {
+      localStorage.setItem("adminSidebarOpen", String(newState))
+    }
   }
 
   return <AdminContext.Provider value={{ sidebarOpen, toggleSidebar }}>{children}</AdminContext.Provider>
@@ -28,4 +42,3 @@ export function useAdmin() {
   }
   return context
 }
-
