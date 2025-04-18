@@ -18,11 +18,13 @@ USE HealthCareDB;
 --     FullName NVARCHAR(100) NOT NULL,
 --     Username NVARCHAR(50) UNIQUE NOT NULL,
 --     Email NVARCHAR(100) UNIQUE NOT NULL,
+--     Password NVARCHAR(50) NOT NULL,
 --     ProfilePic NVARCHAR(255),
 --     PhoneNumber NVARCHAR(20),
 --     DateOfBirth DATE,
 --     Gender NVARCHAR(10),
 --     Address NVARCHAR(255),
+--     EmergencyContactName NVARCHAR(100),
 --     EmergencyContact NVARCHAR(100),
 --     AccountStatus NVARCHAR(20) CHECK (AccountStatus IN ('Active', 'Deactivated', 'Deleted')),
 --     CreatedAt DATETIME DEFAULT GETDATE(),
@@ -30,7 +32,7 @@ USE HealthCareDB;
 -- );
 
 -- CREATE TABLE PatientNotifications (
---     NotificationID INT PRIMARY KEY IDENTITY(1,1),
+--     ID INT PRIMARY KEY IDENTITY(1,1),
 --     PatientID INT FOREIGN KEY REFERENCES Patients(PatientID) ON DELETE CASCADE,
 --     NotificationType NVARCHAR(20) CHECK (NotificationType IN ('Email', 'SMS')),
 --     AppointmentReminders BIT NOT NULL DEFAULT 1,
@@ -76,11 +78,13 @@ INSERT INTO Admins (Name, Username, Email, Password, ProfilePic)
 VALUES ('Admin', 'admin', 'admin@healthcare.com','admin123' ,'profile1.png');
 SELECT * from Admins;
 
+ALTER TABLE Patients ADD EmergencyContactName NVARCHAR(100);
+
 -- Patients
-INSERT INTO Patients (FullName, Username, Email, ProfilePic, PhoneNumber, DateOfBirth, Gender, Address, EmergencyContact, AccountStatus)
+INSERT INTO Patients (FullName, Username, Email, Password, ProfilePic, PhoneNumber, DateOfBirth, Gender, Address, EmergencyContactName, EmergencyContact, AccountStatus)
 VALUES 
-('John Doe', 'johndoe', 'john@example.com', 'john.png', '1234567890', '1990-05-10', 'Male', '123 Street, City', 'Jane Doe - 9876543210', 'Active'),
-('Alice Smith', 'alice', 'alice@example.com', 'alice.png', '5551234567', '1985-11-20', 'Female', '456 Road, City', 'Bob Smith - 7778889999', 'Active');
+('John Doe', 'johndoe', 'john@example.com','john123', 'john.png', '1234567890', '1990-05-10', 'Male', '123 Street, City', 'Jane Doe','9876543210', 'Active'),
+('Alice Smith', 'alice', 'alice@example.com','alice123', 'alice.png', '5551234567', '1985-11-20', 'Female', '456 Road, City', 'Bob Smith','7778889999', 'Active');
 SELECT * from Patients;
 
 -- Notifications
