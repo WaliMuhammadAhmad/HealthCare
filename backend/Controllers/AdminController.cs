@@ -1,47 +1,47 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using System.Security.Cryptography;
+using System.IdentityModel.Tokens.Jwt;
+using System.Security.Claims;
+using Microsoft.IdentityModel.Tokens;
 using System.Text;
 
 namespace backend.Controllers
 {
     [ApiController]
-    [Route("api/[controller]")]
-    public class AdminController : ControllerBase
+[Route("api/[controller]")]
+public class AdminController : ControllerBase
+{
+    private readonly HealthCareDbContext _context;
+    private readonly IConfiguration _config;
+
+    public AdminController(HealthCareDbContext context, IConfiguration config)
     {
-        private readonly HealthCareDbContext _context;
+        _context = context;
+        _config = config;
+    }
 
-        public AdminController(HealthCareDbContext context)
-        {
-            _context = context;
-        }
-
-        // Hash password using SHA256
-        private string HashPassword(string password)
-        {
-            using var sha256 = SHA256.Create();
-            var bytes = Encoding.UTF8.GetBytes(password);
-            var hash = sha256.ComputeHash(bytes);
-            return Convert.ToBase64String(hash);
-        }
-
-        // POST: api/Admin/login
         [HttpPost("login")]
         public async Task<IActionResult> Login([FromBody] LoginRequest request)
         {
-            if (string.IsNullOrEmpty(request.Password))
+            if (string.IsNullOrWhiteSpace(request.Password))
                 return BadRequest(new { message = "Password cannot be null or empty." });
 
-            var hashedPassword = HashPassword(request.Password);
+            var hashedPassword = AuthHelper.HashPassword(request.Password);
+
             var admin = await _context.Admins
-                .FirstOrDefaultAsync(a => a.Username == request.Username && a.Password == hashedPassword);
+                .FirstOrDefaultAsync(a => a.Email == request.Email && a.Password == hashedPassword);
 
             if (admin == null)
-                return Unauthorized(new { message = "Invalid username or password." });
+                return Unauthorized(new { message = "Invalid email or password." });
+
+            // Create JWT
+            var token = AuthHelper.GenerateJwtToken(admin.AdminID.ToString(), admin.Email, "Admin", _config);
 
             return Ok(new
             {
                 message = "Login successful.",
+                token,
                 admin.AdminID,
                 admin.Name,
                 admin.Username,
@@ -49,7 +49,7 @@ namespace backend.Controllers
                 admin.ProfilePic
             });
         }
-
+        
         // GET: api/Admin
         [HttpGet]
         public async Task<IActionResult> GetAll()
@@ -73,7 +73,7 @@ namespace backend.Controllers
         [HttpPost]
         public async Task<IActionResult> Create([FromBody] Admin admin)
         {
-            admin.Password = HashPassword(admin.Password);
+            admin.Password = AuthHelper.HashPassword(admin.Password);
             admin.CreatedAt = DateTime.UtcNow;
             admin.UpdatedAt = DateTime.UtcNow;
 
@@ -126,7 +126,7 @@ namespace backend.Controllers
             if (string.IsNullOrEmpty(request.NewPassword))
                 return BadRequest(new { message = "New password cannot be null or empty." });
 
-            admin.Password = HashPassword(request.NewPassword);
+            admin.Password = AuthHelper.HashPassword(request.NewPassword);
             admin.UpdatedAt = DateTime.UtcNow;
 
             await _context.SaveChangesAsync();
@@ -137,7 +137,7 @@ namespace backend.Controllers
     // --- Request Models ---
     public class LoginRequest
     {
-        public string? Username { get; set; }
+        public string? Email { get; set; }
         public string? Password { get; set; }
     }
 

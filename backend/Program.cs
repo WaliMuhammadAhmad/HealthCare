@@ -1,4 +1,7 @@
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.IdentityModel.Tokens;
+using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -15,8 +18,31 @@ builder.Services.AddCors(options =>
         policy
             .WithOrigins("http://localhost:3000") // ✅ Frontend origin
             .AllowAnyHeader()
-            .AllowAnyMethod();
+            .AllowAnyMethod()
+            .AllowCredentials(); // Important for cookies or credentials
     });
+});
+
+// 👇 Add Authentication - JWT Configuration
+var jwtKey = builder.Configuration["Jwt:Key"]; // Secret Key from appsettings.json
+var jwtIssuer = builder.Configuration["Jwt:Issuer"]; // Issuer from appsettings.json
+
+builder.Services.AddAuthentication(options =>
+{
+    options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
+    options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
+})
+.AddJwtBearer(options =>
+{
+    options.TokenValidationParameters = new TokenValidationParameters
+    {
+        ValidateIssuer = true,
+        ValidateAudience = false, // Optional, depending on your needs
+        ValidateLifetime = true,
+        ValidateIssuerSigningKey = true,
+        ValidIssuer = jwtIssuer,
+        IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey))
+    };
 });
 
 builder.Services.AddControllers();
@@ -36,6 +62,8 @@ if (app.Environment.IsDevelopment())
 
 app.UseHttpsRedirection();
 
+// 👇 Add Authentication and Authorization Middleware
+app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllers();

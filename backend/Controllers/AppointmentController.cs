@@ -24,11 +24,14 @@ namespace backend.Controllers
                 .Include(a => a.Doctor)
                 .ToListAsync();
 
-            var result = appointments.Select(a => new AppointmentDtos
+            var result = appointments.Select(a => new AppointmentResponseDto
             {
                 AppointmentID = a.AppointmentID,
-                PatientID = a.PatientID,
-                DoctorID = a.DoctorID,
+                PatientName = a.Patient!.FullName,
+                PatientEmail = a.Patient!.Email,
+                PatientImage = a.Patient!.ProfilePic,
+                DoctorName = a.Doctor!.FullName,
+                Specialty = a.Doctor!.Specialty,
                 AppointmentDate = a.AppointmentDate,
                 AppointmentTime = a.AppointmentTime,
                 AppointmentType = a.AppointmentType,
@@ -58,11 +61,14 @@ namespace backend.Controllers
             if (a == null)
                 return NotFound(new { message = "Appointment not found." });
 
-            var dto = new AppointmentDtos
+            var dto = new AppointmentResponseDto
             {
                 AppointmentID = a.AppointmentID,
-                PatientID = a.PatientID,
-                DoctorID = a.DoctorID,
+                PatientName = a.Patient!.FullName,
+                PatientEmail = a.Patient!.Email,
+                PatientImage = a.Patient!.ProfilePic,
+                DoctorName = a.Doctor!.FullName,
+                Specialty = a.Doctor!.Specialty,
                 AppointmentDate = a.AppointmentDate,
                 AppointmentTime = a.AppointmentTime,
                 AppointmentType = a.AppointmentType,
@@ -94,7 +100,7 @@ namespace backend.Controllers
                 AppointmentTime = dto.AppointmentTime,
                 AppointmentType = dto.AppointmentType,
                 ReasonForVisit = dto.ReasonForVisit,
-                AppointmentStatus = dto.AppointmentStatus ?? "Pending",
+                AppointmentStatus = dto.AppointmentStatus,
                 Notes = dto.Notes,
                 CancellationReason = dto.CancellationReason,
                 RescheduleReason = dto.RescheduleReason,

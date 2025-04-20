@@ -2,16 +2,17 @@ import { create } from "zustand";
 import axios from "@/utils/axiosInstance";
 
 type Doctor = {
-  DoctorID: number;
-  FullName: string;
-  Email: string;
-  Specialty: string;
-  Status: string;
-  ServiceDays: string;
-  AvailabilityTimes: string;
-  Bio: string;
-  CreatedAt: string;
-  UpdatedAt: string;
+  doctorID: number;
+  fullName: string;
+  profilePic: string;
+  email: string;
+  specialty: string;
+  status: string;
+  serviceDays: string;
+  availabilityTimes: string;
+  bio: string;
+  createdAt: string;
+  updatedAt: string;
 };
 
 type Patient = {
@@ -35,21 +36,24 @@ type Patient = {
 };
 
 type Appointment = {
-  AppointmentID: number;
-  PatientID: number;
-  DoctorID: number;
-  AppointmentDate: string;
-  AppointmentTime: string;
-  AppointmentType: string;
-  ReasonForVisit: string;
-  AppointmentStatus: string;
-  Notes: string;
-  CancellationReason: string;
-  RescheduleReason: string;
-  RescheduleDate: string;
-  RescheduleTime: string;
-  CreatedAt: string;
-  UpdatedAt: string;
+  appointmentID: Number;
+  appointmentDate: string;
+  appointmentStatus: string;
+  appointmentTime: string;
+  appointmentType: string;
+  cancellationReason: null | string;
+  doctorName: string;
+  specialty: string;
+  notes: null | string;
+  patientEmail: string;
+  patientImage: string;
+  patientName: string;
+  reasonForVisit: string | null;
+  rescheduleDate: null | string;
+  rescheduleReason: null | string;
+  rescheduleTime: null | string;
+  createdAt: string;
+  updatedAt: string;
 };
 
 type Store = {

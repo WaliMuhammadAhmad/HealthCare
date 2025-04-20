@@ -10,19 +10,12 @@ namespace backend.Controllers
     public class PatientController : ControllerBase
     {
         private readonly HealthCareDbContext _context;
+        private readonly IConfiguration _config;
 
-        public PatientController(HealthCareDbContext context)
+        public PatientController(HealthCareDbContext context, IConfiguration config)
         {
             _context = context;
-        }
-
-        // Hash password using SHA256
-        private string HashPassword(string password)
-        {
-            using var sha256 = SHA256.Create();
-            var bytes = Encoding.UTF8.GetBytes(password);
-            var hash = sha256.ComputeHash(bytes);
-            return Convert.ToBase64String(hash);
+            _config = config;
         }
 
         // GET: api/Patient
@@ -48,19 +41,24 @@ namespace backend.Controllers
         [HttpPost("login")]
         public async Task<IActionResult> Login([FromBody] LoginRequest request)
         {
-            if (string.IsNullOrEmpty(request.Password))
+            if (string.IsNullOrWhiteSpace(request.Password))
                 return BadRequest(new { message = "Password cannot be null or empty." });
 
-            var hashedPassword = HashPassword(request.Password);
+            var hashedPassword = AuthHelper.HashPassword(request.Password);
+
             var patient = await _context.Patients
-                .FirstOrDefaultAsync(a => a.Username == request.Username && a.Password == hashedPassword);
+                .FirstOrDefaultAsync(a => a.Email == request.Email && a.Password == hashedPassword);
 
             if (patient == null)
-                return Unauthorized(new { message = "Invalid username or password." });
+                return Unauthorized(new { message = "Invalid email or password." });
+
+            // Create JWT
+            var token = AuthHelper.GenerateJwtToken(patient.PatientID.ToString(), patient.Email, "patient", _config);
 
             return Ok(new
             {
                 message = "Login successful.",
+                token,
                 patient.PatientID,
                 patient.FullName,
                 patient.Username,
@@ -73,7 +71,7 @@ namespace backend.Controllers
         [HttpPost]
         public async Task<IActionResult> Create([FromBody] Patient patient)
         {
-            patient.Password = HashPassword(patient.Password);
+            patient.Password = AuthHelper.HashPassword(patient.Password);
             patient.CreatedAt = DateTime.UtcNow;
             patient.UpdatedAt = DateTime.UtcNow;
 
@@ -242,7 +240,7 @@ namespace backend.Controllers
             if (string.IsNullOrEmpty(request.NewPassword))
                 return BadRequest(new { message = "New password cannot be null or empty." });
 
-            patient.Password = HashPassword(request.NewPassword);
+            patient.Password = AuthHelper.HashPassword(request.NewPassword);
             patient.UpdatedAt = DateTime.UtcNow;
 
             await _context.SaveChangesAsync();
