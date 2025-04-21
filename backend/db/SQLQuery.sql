@@ -1,6 +1,6 @@
-CREATE DATABASE HealthCareDB;
+-- CREATE DATABASE HealthCareDB;
 
-USE HealthCareDB;
+-- USE HealthCareDB;
 
 -- CREATE TABLE Admins (
 --     AdminID INT PRIMARY KEY IDENTITY(1,1),
@@ -9,6 +9,19 @@ USE HealthCareDB;
 --     Email NVARCHAR(100) UNIQUE NOT NULL,
 --     Password NVARCHAR(50) NOT NULL,
 --     ProfilePic NVARCHAR(255),
+--     CreatedAt DATETIME DEFAULT GETDATE(),
+--     UpdatedAt DATETIME DEFAULT GETDATE()
+-- );
+
+-- CREATE TABLE Doctors (
+--     DoctorID INT PRIMARY KEY IDENTITY(1,1),
+--     FullName NVARCHAR(100) NOT NULL,
+--     Email NVARCHAR(100) UNIQUE NOT NULL,
+--     Specialty NVARCHAR(100) NOT NULL,
+--     Status NVARCHAR(20) CHECK (Status IN ('Active', 'Inactive')),
+--     ServiceDays NVARCHAR(50) NOT NULL, -- e.g. "Mon, Wed, Fri"
+--     AvailabilityTimes NVARCHAR(100), -- e.g. "10:00-12:00"
+--     Bio NVARCHAR(MAX),
 --     CreatedAt DATETIME DEFAULT GETDATE(),
 --     UpdatedAt DATETIME DEFAULT GETDATE()
 -- );
@@ -41,28 +54,15 @@ USE HealthCareDB;
 --     IsEnabled BIT NOT NULL DEFAULT 1
 -- );
 
--- CREATE TABLE Doctors (
---     DoctorID INT PRIMARY KEY IDENTITY(1,1),
---     FullName NVARCHAR(100) NOT NULL,
---     Email NVARCHAR(100) UNIQUE NOT NULL,
---     Specialty NVARCHAR(100),
---     Status NVARCHAR(20) CHECK (Status IN ('Active', 'Inactive')),
---     ServiceDays NVARCHAR(50), -- e.g. "Mon, Wed, Fri"
---     AvailabilityTimes NVARCHAR(100), -- e.g. "10:00-12:00,14:00-17:00"
---     Bio NVARCHAR(MAX),
---     CreatedAt DATETIME DEFAULT GETDATE(),
---     UpdatedAt DATETIME DEFAULT GETDATE()
--- );
-
 -- CREATE TABLE Appointments (
 --     AppointmentID INT PRIMARY KEY IDENTITY(1,1),
 --     PatientID INT FOREIGN KEY REFERENCES Patients(PatientID) ON DELETE CASCADE,
 --     DoctorID INT FOREIGN KEY REFERENCES Doctors(DoctorID) ON DELETE CASCADE,
 --     AppointmentDate DATE NOT NULL,
 --     AppointmentTime TIME NOT NULL,
---     AppointmentType NVARCHAR(50),
+--     AppointmentType NVARCHAR(50) CHECK (AppointmentType IN ('in-person', 'video', 'phone')),
 --     ReasonForVisit NVARCHAR(255),
---     AppointmentStatus NVARCHAR(20) CHECK (AppointmentStatus IN ('Scheduled', 'Completed', 'Cancelled', 'Rescheduled')),
+--     AppointmentStatus NVARCHAR(20) CHECK (AppointmentStatus IN ('scheduled', 'completed', 'cancelled', 'rescheduled')),
 --     Notes NVARCHAR(MAX),
 --     CancellationReason NVARCHAR(255),
 --     RescheduleReason NVARCHAR(255),
@@ -73,38 +73,101 @@ USE HealthCareDB;
 -- );
 
 -- Dummy Data
--- Admin
-INSERT INTO Admins (Name, Username, Email, Password, ProfilePic)
-VALUES ('Admin', 'admin', 'admin@healthcare.com','admin123' ,'profile1.png');
-SELECT * from Admins;
 
-ALTER TABLE Patients ADD EmergencyContactName NVARCHAR(100);
+-- Admin
+-- INSERT INTO Admins (Name, Username, Email, Password, ProfilePic)
+-- VALUES ('test', 'test', 'test@healthcare.com','test123' ,'profile1.png');
+-- SELECT * from Admins;
 
 -- Patients
-INSERT INTO Patients (FullName, Username, Email, Password, ProfilePic, PhoneNumber, DateOfBirth, Gender, Address, EmergencyContactName, EmergencyContact, AccountStatus)
-VALUES 
-('John Doe', 'johndoe', 'john@example.com','john123', 'john.png', '1234567890', '1990-05-10', 'Male', '123 Street, City', 'Jane Doe','9876543210', 'Active'),
-('Alice Smith', 'alice', 'alice@example.com','alice123', 'alice.png', '5551234567', '1985-11-20', 'Female', '456 Road, City', 'Bob Smith','7778889999', 'Active');
-SELECT * from Patients;
+-- INSERT INTO Patients (FullName, Username, Email, Password, ProfilePic, PhoneNumber, DateOfBirth, Gender, Address, EmergencyContactName, EmergencyContact, AccountStatus, CreatedAt, UpdatedAt)
+-- VALUES
+-- ('John Doe', 'johndoe', 'john@example.com','john123', 'john.png', '1234567890', '1990-05-10', 'Male', '123 Street, City', 'Jane Doe','9876543210', 'Active',GETDATE(),GETDATE()),
+-- ('Alice Smith', 'alice', 'alice@example.com','alice123', 'alice.png', '5551234567', '1985-11-20', 'Female', '456 Road, City', 'Bob Smith','7778889999', 'Active',GETDATE(),GETDATE()),
+-- ('Aisha Malik', 'aisha.malik', 'aisha.malik@gmail.com', 'Password123', NULL, '+1-555-123-4567', '1990-03-15', 'Female', '123 Maple St, Boston, MA 02108', 'Omar Malik', '+1-555-987-6543', 'Active', DATEADD(YEAR, -7, GETDATE()), DATEADD(YEAR, -2, GETDATE())),
+-- ('Carlos Hernandez', 'carlos.h92', 'carlos.hernandez@yahoo.com', 'Secure456', NULL, '+1-555-234-5678', '1985-07-22', 'Male', '456 Oak Ave, Miami, FL 33101', 'Maria Hernandez', '+1-555-876-5432', 'Active', DATEADD(YEAR, -7, GETDATE()), GETDATE()),
+-- ('Priya Patel', 'priya.patel88', 'priya.patel@outlook.com', 'Pass789', NULL, '+1-555-345-6789', '1995-11-30', 'Female', '789 Pine Rd, Chicago, IL 60601', 'Rahul Patel', '+1-555-765-4321', 'Deactivated', DATEADD(YEAR, -6, GETDATE()), DATEADD(YEAR, -3, GETDATE())),
+-- ('Thomas Lee', 'thomas.lee21', 'thomas.lee@gmail.com', 'Thomas2023', NULL, '+1-555-456-7890', '1975-04-10', 'Male', '101 Cedar Ln, Seattle, WA 98101', 'Emma Lee', '+1-555-654-3210', 'Active', DATEADD(YEAR, -6, GETDATE()), DATEADD(MONTH, -6, GETDATE())),
+-- ('Sofia Alvarez', 'sofia.alv', 'sofia.alvarez@hotmail.com', 'SofiaPass', NULL, '+1-555-567-8901', '2000-09-05', 'Female', '202 Birch St, Houston, TX 77001', 'Juan Alvarez', '+1-555-543-2109', 'Active', DATEADD(YEAR, -5, GETDATE()), GETDATE()),
+-- ('Omar Farooq', 'omar.farooq7', 'omar.farooq@gmail.com', 'Omar1234', NULL, '+1-555-678-9012', '1988-12-12', 'Male', '303 Elm Dr, Atlanta, GA 30301', 'Fatima Farooq', '+1-555-432-1098', 'Active', DATEADD(YEAR, -5, GETDATE()), DATEADD(YEAR, -1, GETDATE())),
+-- ('Elena Petrova', 'elena.petrova', 'elena.petrova@yahoo.com', 'Elena456', NULL, '+1-555-789-0123', '1965-01-25', 'Female', '404 Spruce Ct, Denver, CO 80201', 'Ivan Petrov', '+1-555-321-0987', 'Deactivated', DATEADD(YEAR, -4, GETDATE()), DATEADD(YEAR, -2, GETDATE())),
+-- ('Daniel Kim', 'daniel.kim99', 'daniel.kim@outlook.com', 'KimPass789', NULL, '+1-555-890-1234', '1993-06-18', 'Male', '505 Walnut St, San Francisco, CA 94101', 'Sarah Kim', '+1-555-210-9876', 'Active', DATEADD(YEAR, -4, GETDATE()), GETDATE()),
+-- ('Mei Chen', 'mei.chen', 'mei.chen@gmail.com', 'Mei2023', NULL, '+1-555-901-2345', '1980-02-28', 'Female', '606 Chestnut Ave, New York, NY 10001', 'Li Chen', '+1-555-109-8765', 'Active', DATEADD(YEAR, -3, GETDATE()), DATEADD(MONTH, -3, GETDATE())),
+-- ('Javier Morales', 'javier.morales', 'javier.morales@hotmail.com', 'JavierPass', NULL, '+1-555-012-3456', '1970-10-03', 'Male', '707 Laurel Rd, Phoenix, AZ 85001', 'Carmen Morales', '+1-555-098-7654', 'Active', DATEADD(YEAR, -3, GETDATE()), GETDATE()),
+-- ('Fatima Zahra', 'fatima.zahra', 'fatima.zahra@gmail.com', 'Fatima123', NULL, '+1-555-123-4568', '2005-05-20', 'Female', '808 Magnolia St, Los Angeles, CA 90001', 'Ahmed Zahra', '+1-555-987-6542', 'Active', DATEADD(YEAR, -2, GETDATE()), DATEADD(MONTH, -1, GETDATE())),
+-- ('Lucas Schmidt', 'lucas.schmidt', 'lucas.schmidt@yahoo.com', 'Lucas456', NULL, '+1-555-234-5679', '1997-08-14', 'Male', '909 Sycamore Ln, Portland, OR 97201', 'Anna Schmidt', '+1-555-876-5431', 'Active', DATEADD(YEAR, -2, GETDATE()), GETDATE()),
+-- ('Amara Nwosu', 'amara.nwosu', 'amara.nwosu@outlook.com', 'Amara789', NULL, '+1-555-345-6780', '1983-03-09', 'Female', '1010 Aspen Dr, Dallas, TX 75201', 'Chidi Nwosu', '+1-555-765-4320', 'Deactivated', DATEADD(YEAR, -2, GETDATE()), DATEADD(YEAR, -1, GETDATE())),
+-- ('Noah Carter', 'noah.carter22', 'noah.carter@gmail.com', 'NoahPass', NULL, '+1-555-456-7891', '2002-11-11', 'Male', '1111 Poplar St, Philadelphia, PA 19101', 'Emily Carter', '+1-555-654-3211', 'Active', DATEADD(YEAR, -1, GETDATE()), GETDATE()),
+-- ('Zara Khan', 'zara.khan', 'zara.khan@hotmail.com', 'Zara1234', NULL, '+1-555-567-8902', '1991-07-07', 'Female', '1212 Willow Ct, San Diego, CA 92101', 'Imran Khan', '+1-555-543-2108', 'Active', DATEADD(YEAR, -1, GETDATE()), DATEADD(MONTH, -2, GETDATE())),
+-- ('Liam O’Connor', 'liam.oconnor', 'liam.oconnor@yahoo.com', 'Liam456', NULL, '+1-555-678-9013', '1960-04-30', 'Male', '1313 Cedar St, Minneapolis, MN 55401', 'Mary O’Connor', '+1-555-432-1097', 'Deleted', DATEADD(YEAR, -1, GETDATE()), DATEADD(MONTH, -6, GETDATE())),
+-- ('Isabella Rossi', 'isabella.rossi', 'isabella.rossi@gmail.com', 'Isabella789', NULL, '+1-555-789-0124', '1987-12-22', 'Female', '1414 Birch Ave, Charlotte, NC 28201', 'Marco Rossi', '+1-555-321-0986', 'Active', DATEADD(YEAR, -1, GETDATE()), GETDATE()),
+-- ('Elijah Mwangi', 'elijah.mwangi', 'elijah.mwangi@outlook.com', 'ElijahPass', NULL, '+1-555-890-1235', '1994-09-15', 'Male', '1515 Oak Rd, Nashville, TN 37201', 'Grace Mwangi', '+1-555-210-9875', 'Active', DATEADD(MONTH, -10, GETDATE()), DATEADD(MONTH, -3, GETDATE())),
+-- ('Ava Gupta', 'ava.gupta', 'ava.gupta@gmail.com', 'Ava123', NULL, '+1-555-901-2346', '2008-01-10', 'Female', '1616 Pine St, Las Vegas, NV 89101', 'Vikram Gupta', '+1-555-109-8764', 'Active', DATEADD(MONTH, -10, GETDATE()), GETDATE()),
+-- ('Hiroshi Tanaka', 'hiroshi.tanaka', 'hiroshi.tanaka@yahoo.com', 'Hiroshi456', NULL, '+1-555-012-3457', '1978-06-05', 'Male', '1717 Elm Dr, Columbus, OH 43201', 'Yuki Tanaka', '+1-555-098-7653', 'Active', DATEADD(MONTH, -8, GETDATE()), DATEADD(MONTH, -1, GETDATE())),
+-- ('Maya Dubois', 'maya.dubois', 'maya.dubois@hotmail.com', 'Maya789', NULL, '+1-555-123-4569', '1989-02-17', 'Female', '1818 Spruce Ct, Raleigh, NC 27601', 'Pierre Dubois', '+1-555-987-6541', 'Deactivated', DATEADD(MONTH, -8, GETDATE()), DATEADD(MONTH, -4, GETDATE())),
+-- ('Samuel Adebayo', 'samuel.adebayo', 'samuel.adebayo@gmail.com', 'SamuelPass', NULL, '+1-555-234-5670', '1996-10-08', 'Male', '1919 Walnut St, Kansas City, MO 64101', 'Tolu Adebayo', '+1-555-876-5430', 'Active', DATEADD(MONTH, -6, GETDATE()), GETDATE()),
+-- ('Chloe Lim', 'chloe.lim', 'chloe.lim@outlook.com', 'Chloe123', NULL, '+1-555-345-6781', '2003-03-03', 'Female', '2020 Chestnut Ave, Orlando, FL 32801', 'Wei Lim', '+1-555-765-4329', 'Active', DATEADD(MONTH, -6, GETDATE()), DATEADD(MONTH, -2, GETDATE())),
+-- ('Aria Singh', 'aria.singh', 'aria.singh@gmail.com', 'Aria456', NULL, '+1-555-456-7892', '1984-05-27', 'Other', '2121 Laurel Rd, Salt Lake City, UT 84101', 'Ravi Singh', '+1-555-654-3218', 'Active', DATEADD(MONTH, -4, GETDATE()), GETDATE()),
+-- ('Ethan Wong', 'ethan.wong', 'ethan.wong@yahoo.com', 'Ethan789', NULL, '+1-555-567-8903', '1999-08-19', 'Male', '2222 Magnolia St, Indianapolis, IN 46201', 'Lily Wong', '+1-555-543-2107', 'Deleted', DATEADD(MONTH, -4, GETDATE()), DATEADD(MONTH, -1, GETDATE()));
+-- SELECT * FROM Patients;
 
 -- Notifications
-INSERT INTO PatientNotifications (PatientID, NotificationType,AppointmentReminders,AppointmentChanges,MedicalUpdates, IsEnabled)
-VALUES
-(1, 'Email', 1, 1, 1, 1),
-(1, 'SMS', 0, 1, 1, 1),
-(2, 'Email', 1, 1, 1, 1);
-Select * from PatientNotifications;
+-- INSERT INTO PatientNotifications (PatientID, NotificationType,AppointmentReminders,AppointmentChanges,MedicalUpdates, IsEnabled)
+-- VALUES
+-- (12, 'Email', 1, 1, 1, 1),
+-- (3, 'SMS', 0, 1, 1, 1),
+-- (2, 'Email', 1, 1, 1, 1),
+-- (5, 'SMS', 0, 1, 1, 1),
+-- (7, 'Email', 1, 1, 1, 1),
+-- (18, 'SMS', 0, 1, 1, 1),
+-- (22, 'Email', 1, 1, 1, 1),
+-- (13, 'SMS', 0, 1, 1, 1);
+-- Select * from PatientNotifications;
 
 -- Doctors
-INSERT INTO Doctors (FullName, Email, Specialty, Status, ServiceDays, AvailabilityTimes, Bio)
-VALUES 
-('Dr. Sarah Lee', 'sarah.lee@hospital.com', 'Cardiology', 'Active', 'Mon, Wed, Fri', '10:00-12:00,14:00-17:00', 'Experienced in cardiovascular treatments.'),
-('Dr. Michael Tan', 'michael.tan@hospital.com', 'Dermatology', 'Active', 'Tue, Thu', '09:00-11:00,13:00-15:00', 'Specialist in skin and allergy treatments.');
-SELECT * from Doctors;
+-- INSERT INTO Doctors (FullName, Email, Specialty, Status, ServiceDays, AvailabilityTimes, Bio, CreatedAt, UpdatedAt)
+-- VALUES
+-- ('Dr. John Smith', 'john.smith@hospital.com', 'Family Medicine', 'Active', 'Mon, Wed, Fri', '09:00-17:00', 'Experienced in comprehensive family care.', GETDATE(), GETDATE()),
+-- ('Dr. Emily Johnson', 'emily.johnson@hospital.com', 'Cardiology', 'Active', 'Tue, Thu', '10:00-16:00', 'Specializes in heart disease management.', GETDATE(), GETDATE()),
+-- ('Dr. Michael Chen', 'michael.chen@hospital.com', 'Dermatology', 'Active', 'Mon, Thu, Fri', '08:30-14:30', 'Expert in skin conditions and treatments.', GETDATE(), GETDATE()),
+-- ('Dr. Sarah Davis', 'sarah.davis@hospital.com', 'Pediatrics', 'Active', 'Wed, Fri', '09:30-17:30', 'Dedicated to child health and development.', GETDATE(), GETDATE()),
+-- ('Dr. Robert Patel', 'robert.patel@hospital.com', 'Orthopedics', 'Active', 'Mon, Tue, Thu', '11:00-18:00', 'Focuses on musculoskeletal injuries.', GETDATE(), GETDATE()),
+-- ('Dr. Lisa Wong', 'lisa.wong@hospital.com', 'Neurology', 'Active', 'Tue, Wed, Fri', '08:00-15:00', 'Specializes in neurological disorders.', GETDATE(), GETDATE()),
+-- ('Dr. David Kim', 'david.kim@hospital.com', 'Psychiatry', 'Inactive', 'Mon, Wed', '10:00-13:00', 'Provides mental health support.', GETDATE(), GETDATE()),
+-- ('Dr. Amanda Lee', 'amanda.lee@hospital.com', 'Obstetrics & Gynecology', 'Active', 'Thu, Fri', '09:00-16:00', 'Expert in women’s reproductive health.', GETDATE(), GETDATE()),
+-- ('Dr. James Brown', 'james.brown@hospital.com', 'Ophthalmology', 'Active', 'Mon, Tue, Fri', '08:30-15:30', 'Specializes in eye care and surgery.', GETDATE(), GETDATE()),
+-- ('Dr. Olivia Taylor', 'olivia.taylor@hospital.com', 'Endocrinology', 'Active', 'Wed, Thu', '10:30-17:00', 'Manages hormonal and metabolic disorders.', GETDATE(), GETDATE());
+-- SELECT * from Doctors;
 
 -- Appointments
-INSERT INTO Appointments (PatientID, DoctorID, AppointmentDate, AppointmentTime, AppointmentType, ReasonForVisit, AppointmentStatus)
-VALUES 
-(1, 1, '2025-04-20', '10:30', 'Consultation', 'Chest pain and discomfort.', 'Scheduled'),
-(2, 2, '2025-04-21', '09:15', 'Follow-up', 'Skin allergy flare-up.', 'Scheduled');
-SELECT * from Appointments;
+-- INSERT INTO Appointments (PatientID, DoctorID, AppointmentDate, AppointmentTime, AppointmentType, ReasonForVisit, AppointmentStatus, Notes, CancellationReason, RescheduleReason, RescheduleDate, RescheduleTime, CreatedAt, UpdatedAt)
+-- VALUES
+-- (1, 1, '2023-01-15', '09:00:00', 'in-person', 'Annual check-up', 'completed', 'Patient is healthy.', NULL, NULL, NULL, NULL, DATEADD(YEAR, -2, GETDATE()), DATEADD(YEAR, -2, GETDATE())),
+-- (2, 2, '2023-02-20', '14:00:00', 'video', 'Chest pain evaluation', 'completed', 'Prescribed medication.', NULL, NULL, NULL, NULL, DATEADD(YEAR, -2, GETDATE()), GETDATE()),
+-- (3, 3, '2023-03-10', '11:00:00', 'in-person', 'Skin rash', 'cancelled', NULL, 'Patient no-show', NULL, NULL, NULL, DATEADD(YEAR, -2, GETDATE()), DATEADD(YEAR, -1, GETDATE())),
+-- (4, 4, '2023-04-05', '10:00:00', 'phone', 'Child fever', 'completed', 'Advised rest and fluids.', NULL, NULL, NULL, NULL, DATEADD(YEAR, -2, GETDATE()), DATEADD(MONTH, -6, GETDATE())),
+-- (5, 5, '2023-05-12', '15:00:00', 'in-person', 'Knee pain', 'rescheduled', 'X-ray needed.', NULL, 'Patient unavailable', '2023-05-20', '15:00:00', DATEADD(YEAR, -2, GETDATE()), DATEADD(YEAR, -1, GETDATE())),
+-- (6, 6, '2023-06-18', '08:00:00', 'video', 'Headache concerns', 'scheduled', 'Pending MRI.', NULL, NULL, NULL, NULL, DATEADD(YEAR, -2, GETDATE()), GETDATE()),
+-- (7, 7, '2023-07-25', '12:00:00', 'phone', 'Mental health check', 'completed', 'Therapy recommended.', NULL, NULL, NULL, NULL, DATEADD(YEAR, -1, GETDATE()), DATEADD(MONTH, -3, GETDATE())),
+-- (8, 8, '2023-08-30', '13:00:00', 'in-person', 'Pregnancy follow-up', 'completed', 'Ultrasound normal.', NULL, NULL, NULL, NULL, DATEADD(YEAR, -1, GETDATE()), GETDATE()),
+-- (9, 9, '2023-09-15', '09:00:00', 'video', 'Vision check', 'cancelled', NULL, 'Doctor unavailable', NULL, NULL, NULL, DATEADD(YEAR, -1, GETDATE()), DATEADD(YEAR, -1, GETDATE())),
+-- (10, 10, '2023-10-22', '16:00:00', 'in-person', 'Diabetes management', 'scheduled', 'Blood test ordered.', NULL, NULL, NULL, NULL, DATEADD(YEAR, -1, GETDATE()), GETDATE()),
+-- (11, 11, '2023-11-10', '10:00:00', 'phone', 'Flu symptoms', 'completed', 'Prescribed antivirals.', NULL, NULL, NULL, NULL, DATEADD(YEAR, -1, GETDATE()), DATEADD(MONTH, -2, GETDATE())),
+-- (12, 12, '2023-12-05', '14:00:00', 'in-person', 'Back pain', 'rescheduled', 'Needs MRI.', NULL, 'Schedule conflict', '2023-12-12', '14:00:00', DATEADD(YEAR, -1, GETDATE()), DATEADD(MONTH, -1, GETDATE())),
+-- (13, 13, '2024-01-20', '11:00:00', 'video', 'Allergy consultation', 'scheduled', 'Pending tests.', NULL, NULL, NULL, NULL, DATEADD(MONTH, -15, GETDATE()), GETDATE()),
+-- (14, 14, '2024-02-15', '09:00:00', 'in-person', 'Annual physical', 'completed', 'All vitals normal.', NULL, NULL, NULL, NULL, DATEADD(MONTH, -14, GETDATE()), DATEADD(MONTH, -3, GETDATE())),
+-- (15, 15, '2024-03-22', '15:00:00', 'phone', 'Thyroid check', 'cancelled', NULL, 'Patient cancelled', NULL, NULL, NULL, DATEADD(MONTH, -13, GETDATE()), DATEADD(MONTH, -6, GETDATE())),
+-- (16, 16, '2024-04-10', '08:00:00', 'in-person', 'Post-op follow-up', 'completed', 'Healing well.', NULL, NULL, NULL, NULL, DATEADD(MONTH, -12, GETDATE()), GETDATE()),
+-- (17, 17, '2024-05-18', '12:00:00', 'video', 'Blood pressure review', 'scheduled', 'Monitor readings.', NULL, NULL, NULL, NULL, DATEADD(MONTH, -11, GETDATE()), GETDATE()),
+-- (18, 18, '2024-06-25', '13:00:00', 'in-person', 'Skin lesion check', 'completed', 'Biopsy taken.', NULL, NULL, NULL, NULL, DATEADD(MONTH, -10, GETDATE()), DATEADD(MONTH, -1, GETDATE())),
+-- (19, 19, '2024-07-30', '10:00:00', 'phone', 'Pediatric check-up', 'rescheduled', 'Needs vaccination.', NULL, 'Doctor unavailable', '2024-08-05', '10:00:00', DATEADD(MONTH, -9, GETDATE()), DATEADD(MONTH, -2, GETDATE())),
+-- (20, 20, '2024-08-15', '14:00:00', 'in-person', 'Neurological exam', 'scheduled', 'EEG scheduled.', NULL, NULL, NULL, NULL, DATEADD(MONTH, -8, GETDATE()), GETDATE()),
+-- (21, 21, '2024-09-20', '09:00:00', 'video', 'Anxiety consultation', 'completed', 'Prescribed therapy.', NULL, NULL, NULL, NULL, DATEADD(MONTH, -7, GETDATE()), DATEADD(MONTH, -3, GETDATE())),
+-- (22, 22, '2024-10-05', '11:00:00', 'in-person', 'Prenatal visit', 'scheduled', 'Ultrasound planned.', NULL, NULL, NULL, NULL, DATEADD(MONTH, -6, GETDATE()), GETDATE()),
+-- (23, 23, '2024-11-12', '15:00:00', 'phone', 'Eye exam follow-up', 'cancelled', NULL, 'Patient rescheduled', NULL, NULL, NULL, DATEADD(MONTH, -5, GETDATE()), DATEADD(MONTH, -1, GETDATE())),
+-- (24, 24, '2024-12-18', '08:00:00', 'in-person', 'Hormone therapy review', 'scheduled', 'Lab results pending.', NULL, NULL, NULL, NULL, DATEADD(MONTH, -4, GETDATE()), GETDATE()),
+-- (25, 25, '2025-01-10', '12:00:00', 'video', 'General consultation', 'scheduled', 'Routine check.', NULL, NULL, NULL, NULL, DATEADD(MONTH, -3, GETDATE()), GETDATE()),
+-- (1, 11, '2025-02-15', '10:00:00', 'in-person', 'Follow-up visit', 'scheduled', 'Check progress.', NULL, NULL, NULL, NULL, DATEADD(MONTH, -2, GETDATE()), GETDATE()),
+-- (2, 12, '2025-03-20', '14:00:00', 'phone', 'Chronic pain management', 'scheduled', 'Review medication.', NULL, NULL, NULL, NULL, DATEADD(MONTH, -1, GETDATE()), GETDATE()),
+-- (3, 13, '2025-04-05', '09:00:00', 'in-person', 'Dermatology consult', 'scheduled', 'Examine moles.', NULL, NULL, NULL, NULL, DATEADD(MONTH, -1, GETDATE()), GETDATE());
+-- SELECT * FROM Appointments;
