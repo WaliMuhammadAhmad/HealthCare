@@ -1,0 +1,20 @@
+export type Appointment = {
+  appointmentID: number;
+  appointmentDate: string;
+  appointmentStatus: string;
+  appointmentTime: string;
+  appointmentType: string;
+  cancellationReason: null | string;
+  doctorName: string;
+  specialty: string;
+  notes: null | string;
+  patientEmail: string;
+  patientImage: string;
+  patientName: string;
+  reasonForVisit: string | null;
+  rescheduleDate: null | string;
+  rescheduleReason: null | string;
+  rescheduleTime: null | string;
+  createdAt: string;
+  updatedAt: string;
+};
