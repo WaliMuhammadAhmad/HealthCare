@@ -1,118 +1,89 @@
-import { create } from "zustand";
 import axios from "@/utils/axiosInstance";
-
-type Doctor = {
-  doctorID: number;
-  fullName: string;
-  profilePic: string;
-  email: string;
-  specialty: string;
-  status: string;
-  serviceDays: string;
-  availabilityTimes: string;
-  bio: string;
-  createdAt: string;
-  updatedAt: string;
-};
-
-type Patient = {
-  patientID: number;
-  fullName: string;
-  username: string;
-  email: string;
-  password: string;
-  profilePic: string;
-  phoneNumber: string;
-  dateOfBirth: string;
-  gender: string;
-  address: string;
-  emergencyContactName: string;
-  emergencyContact: string;
-  accountStatus: string;
-  appointments: any;
-  notifications: any;
-  createdAt: string;
-  updatedAt: string;
-};
-
-type Appointment = {
-  appointmentID: Number;
-  appointmentDate: string;
-  appointmentStatus: string;
-  appointmentTime: string;
-  appointmentType: string;
-  cancellationReason: null | string;
-  doctorName: string;
-  specialty: string;
-  notes: null | string;
-  patientEmail: string;
-  patientImage: string;
-  patientName: string;
-  reasonForVisit: string | null;
-  rescheduleDate: null | string;
-  rescheduleReason: null | string;
-  rescheduleTime: null | string;
-  createdAt: string;
-  updatedAt: string;
-};
+import { create } from "zustand";
+import { persist, createJSONStorage } from "zustand/middleware";
+import { Admin } from "./types/Admin";
+import { Doctor } from "./types/Doctor";
+import { Patient } from "./types/Patient";
+import { Appointment } from "./types/Appointment";
+import { fetchAdminProfile } from "@/utils/api/admin";
+import { fetchUserProfile } from "@/utils/api/user";
 
 type Store = {
-  patients: Patient[];
+  admin: Admin | null;
+  user: Patient | null;
   doctors: Doctor[];
   appointments: Appointment[];
   initialized: boolean;
 
-  // Fetch and Setters
   initializeData: () => Promise<void>;
-  setPatients: (patients: Patient[]) => void;
+
+  setAdmin: (admin: Admin | null) => void;
+  setUser: (user: Patient | null) => void;
+
   setDoctors: (doctors: Doctor[]) => void;
   setAppointments: (appointments: Appointment[]) => void;
 
-  // Optional: Re-fetch from backend
-  refreshPatients: () => Promise<void>;
+  refreshAdmin: () => Promise<void>;
+  refreshUser: () => Promise<void>;
+
   refreshDoctors: () => Promise<void>;
   refreshAppointments: () => Promise<void>;
 };
 
-export const useAppStore = create<Store>((set, get) => ({
-  patients: [],
-  doctors: [],
-  appointments: [],
-  initialized: false,
+export const useAppStore = create<Store>()(
+  persist(
+    (set, get) => ({
+      admin: null,
+      user: null,
+      doctors: [],
+      appointments: [],
+      initialized: false,
 
-  setPatients: (patients) => set({ patients }),
-  setDoctors: (doctors) => set({ doctors }),
-  setAppointments: (appointments) => set({ appointments }),
+      setAdmin: (admin) => set({ admin }),
+      setUser: (user) => set({ user }),
+      setDoctors: (doctors) => set({ doctors }),
+      setAppointments: (appointments) => set({ appointments }),
 
-  initializeData: async () => {
-    if (get().initialized) return;
+      initializeData: async () => {
+        if (get().initialized) return;
 
-    const [patientsRes, doctorsRes, appointmentsRes] = await Promise.all([
-      axios.get("/Patient"),
-      axios.get("/Doctor"),
-      axios.get("/Appointment"),
-    ]);
+        const [doctorsRes, appointmentsRes] = await Promise.all([
+          axios.get("/Doctor"),
+          axios.get("/Appointment"),
+        ]);
 
-    set({
-      patients: patientsRes.data,
-      doctors: doctorsRes.data,
-      appointments: appointmentsRes.data,
-      initialized: true,
-    });
-  },
+        set({
+          doctors: doctorsRes.data,
+          appointments: appointmentsRes.data,
+          initialized: true,
+        });
+      },
 
-  refreshPatients: async () => {
-    const res = await axios.get("/Patient");
-    set({ patients: res.data });
-  },
+      refreshAdmin: async () => {
+        await fetchAdminProfile();
+      },
 
-  refreshDoctors: async () => {
-    const res = await axios.get("/Doctor");
-    set({ doctors: res.data });
-  },
+      refreshUser: async () => {
+        await fetchUserProfile();
+      },
 
-  refreshAppointments: async () => {
-    const res = await axios.get("/Appointment");
-    set({ appointments: res.data });
-  },
-}));
+      refreshDoctors: async () => {
+        const res = await axios.get("/Doctor");
+        set({ doctors: res.data });
+      },
+
+      refreshAppointments: async () => {
+        const res = await axios.get("/Appointment");
+        set({ appointments: res.data });
+      },
+    }),
+    {
+      name: "app-store",
+      storage: createJSONStorage(() => sessionStorage),
+      partialize: (state) => ({
+        user: state.user,
+        admin: state.admin,
+      }),
+    }
+  )
+);

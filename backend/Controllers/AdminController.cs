@@ -1,10 +1,5 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using System.Security.Cryptography;
-using System.IdentityModel.Tokens.Jwt;
-using System.Security.Claims;
-using Microsoft.IdentityModel.Tokens;
-using System.Text;
 
 namespace backend.Controllers
 {
@@ -49,6 +44,35 @@ public class AdminController : ControllerBase
                 admin.ProfilePic
             });
         }
+
+        [HttpGet("me")]
+        public async Task<IActionResult> GetAdminProfile()
+        {
+            var token = Request.Cookies["admin_token"];
+            if (string.IsNullOrEmpty(token))
+                return Unauthorized("Missing token"); 
+
+            var adminId = AuthHelper.GetUserIdFromToken(token, "Admin", _config);
+            if (adminId == null)
+                return Unauthorized("Invalid token");
+
+            var admin = await _context.Admins
+                .Where(a => a.AdminID == adminId)
+                .Select(a => new
+                {
+                    a.AdminID,
+                    a.Name,
+                    a.Username,
+                    a.Email,
+                    a.ProfilePic,
+                })
+                .FirstOrDefaultAsync();
+
+            if (admin == null)
+                return NotFound("Admin not found");
+
+            return Ok(admin);
+        }
         
         // GET: api/Admin
         [HttpGet]
@@ -85,7 +109,7 @@ public class AdminController : ControllerBase
 
         // PUT: api/Admin/1
         [HttpPut("{id}")]
-        public async Task<IActionResult> Update(int id, [FromBody] Admin updatedAdmin)
+        public async Task<IActionResult> Update(int id, [FromBody] EditAdminInfoDto updatedAdmin)
         {
             var admin = await _context.Admins.FindAsync(id);
             if (admin == null)
@@ -123,8 +147,16 @@ public class AdminController : ControllerBase
             if (admin == null)
                 return NotFound(new { message = "Admin not found." });
 
+            if (string.IsNullOrEmpty(request.OldPassword))
+                return BadRequest(new { message = "Old password cannot be null or empty." });
+
             if (string.IsNullOrEmpty(request.NewPassword))
                 return BadRequest(new { message = "New password cannot be null or empty." });
+
+            var hashedPassword = AuthHelper.HashPassword(request.OldPassword);
+
+            if (admin.Password != hashedPassword)
+                return Unauthorized(new { message = "Old password is incorrect." });
 
             admin.Password = AuthHelper.HashPassword(request.NewPassword);
             admin.UpdatedAt = DateTime.UtcNow;
@@ -132,17 +164,5 @@ public class AdminController : ControllerBase
             await _context.SaveChangesAsync();
             return Ok(new { message = "Password updated successfully." });
         }
-    }
-
-    // --- Request Models ---
-    public class LoginRequest
-    {
-        public string? Email { get; set; }
-        public string? Password { get; set; }
-    }
-
-    public class PasswordUpdateRequest
-    {
-        public string? NewPassword { get; set; }
     }
 }

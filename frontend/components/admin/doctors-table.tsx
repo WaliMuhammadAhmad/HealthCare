@@ -123,13 +123,9 @@ export function DoctorsTable() {
 
   const handleSaveDoctor = () => {
     if (isEditing && selectedDoctor) {
-      console.log("Editing doctor:", selectedDoctor);
-      console.log("Form data:", formData);
       editDoctor(selectedDoctor.doctorID, formData);
       setIsEditing(false);
     } else if (isAdding) {
-      console.log("Adding new doctor");
-      console.log("Form data:", formData);
       addDoctor(formData);
       setIsAdding(false);
     }
