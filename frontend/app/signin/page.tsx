@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import {
@@ -15,8 +15,8 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Navbar } from "@/components/navbar";
-import { login } from "@/utils/auth";
 import { toast } from "sonner";
+import { login } from "@/utils/auth/login";
 
 export default function SigninPage() {
   const [email, setEmail] = useState("");
@@ -29,11 +29,13 @@ export default function SigninPage() {
     setLoading(true);
     try {
       const data = await login(email, password);
-      toast.success("Login successful");
-      if (email.toLowerCase().endsWith("@healthcare.com")) {
-        router.push("/admin");
-      } else {
-        router.push("/appointments");
+      if (data) {
+        toast.success("Login successful");
+        if (email.toLowerCase().endsWith("@healthcare.com")) {
+          router.push("/admin");
+        } else {
+          router.push("/appointments");
+        }
       }
     } catch (error: any) {
       toast.error(error.message || "Login failed");

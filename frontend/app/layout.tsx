@@ -13,8 +13,12 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   const initializeData = useAppStore((state) => state.initializeData);
+  const initializePatientData = usePatientStore(
+    (state) => state.initializeData
+  );
   useEffect(() => {
     initializeData();
+    initializePatientData();
   }, []);
 
   return (
@@ -34,3 +38,4 @@ export default function RootLayout({
 
 import "./globals.css";
 import { useEffect } from "react";
+import { usePatientStore } from "@/stores/usePatientStore";
