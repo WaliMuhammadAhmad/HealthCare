@@ -32,7 +32,7 @@ export async function addDoctor({
       bio,
     });
 
-    await useAppStore.getState().refreshDoctors();
+    useAppStore.getState().refreshDoctors();
   } catch (error: any) {
     const message = error.response?.data?.message || "Failed to add doctor";
     throw new Error(message);
@@ -49,7 +49,7 @@ export async function editDoctor(
       ...updatedData,
     });
 
-    await useAppStore.getState().refreshDoctors();
+    useAppStore.getState().refreshDoctors();
   } catch (error: any) {
     const message = error.response?.data?.message || "Failed to update doctor";
     throw new Error(message);
@@ -61,9 +61,19 @@ export async function deleteDoctor(doctorID: number) {
   try {
     await axios.delete(`/Doctor/${doctorID}`);
 
-    await useAppStore.getState().refreshDoctors();
+    useAppStore.getState().refreshDoctors();
   } catch (error: any) {
     const message = error.response?.data?.message || "Failed to delete doctor";
     throw new Error(message);
   }
 }
+
+export const doctorBookedAppointments = async (doctorId: number) => {
+  try {
+    const response = await axios.get(`/Appointment/doctor/${doctorId}/booked`);
+    return response.data;
+  } catch (error) {
+    console.error("Failed to fetch booked appointments:", error);
+    return [];
+  }
+};
