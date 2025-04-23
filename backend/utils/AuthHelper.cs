@@ -17,7 +17,12 @@ public static class AuthHelper
 
     public static string GenerateJwtToken(string userId, string email, string role, IConfiguration config)
     {
-        var key = Encoding.UTF8.GetBytes(config["Jwt:Key"]);
+        var jwtKey = config["Jwt:Key"];
+        if (string.IsNullOrEmpty(jwtKey))
+        {
+            throw new ArgumentNullException("Jwt:Key", "JWT key is not configured.");
+        }
+        var key = Encoding.UTF8.GetBytes(jwtKey);
         var issuer = config["Jwt:Issuer"];
 
         var tokenDescriptor = new SecurityTokenDescriptor
@@ -36,5 +41,40 @@ public static class AuthHelper
         var tokenHandler = new JwtSecurityTokenHandler();
         var token = tokenHandler.CreateToken(tokenDescriptor);
         return tokenHandler.WriteToken(token);
+    }
+
+    public static int? GetUserIdFromToken(string token, string role, IConfiguration config)
+    {
+        var tokenHandler = new JwtSecurityTokenHandler();
+        var jwtKey = config["Jwt:Key"];
+        if (string.IsNullOrEmpty(jwtKey))
+        {
+            throw new ArgumentNullException("Jwt:Key", "JWT key is not configured.");
+        }
+        var key = Encoding.UTF8.GetBytes(jwtKey);
+
+        try
+        {
+            var claimsPrincipal = tokenHandler.ValidateToken(token, new TokenValidationParameters
+            {
+                ValidateIssuerSigningKey = true,
+                ValidateIssuer = false,
+                ValidateAudience = false,
+                IssuerSigningKey = new SymmetricSecurityKey(key),
+                ClockSkew = TimeSpan.Zero
+            }, out SecurityToken validatedToken);
+
+            var userIdClaim = claimsPrincipal.FindFirst(ClaimTypes.NameIdentifier);
+            var roleClaim = claimsPrincipal.FindFirst(ClaimTypes.Role);
+
+            if (roleClaim == null || roleClaim.Value != role)
+                throw new UnauthorizedAccessException("Role mismatch");
+
+            return userIdClaim != null ? int.Parse(userIdClaim.Value) : null;
+        }
+        catch
+        {
+            return null;
+        }
     }
 }
