@@ -24,7 +24,7 @@ builder.Services.AddCors(options =>
 });
 
 // 👇 Add Authentication - JWT Configuration
-var jwtKey = builder.Configuration["Jwt:Key"]; // Secret Key from appsettings.json
+var jwtKey = builder.Configuration["Jwt:Key"] ?? throw new InvalidOperationException("JWT Key is not configured."); // Secret Key from appsettings.json
 var jwtIssuer = builder.Configuration["Jwt:Issuer"]; // Issuer from appsettings.json
 
 builder.Services.AddAuthentication(options =>
@@ -41,7 +41,7 @@ builder.Services.AddAuthentication(options =>
         ValidateLifetime = true,
         ValidateIssuerSigningKey = true,
         ValidIssuer = jwtIssuer,
-        IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey))
+        IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey!))
     };
 });
 
