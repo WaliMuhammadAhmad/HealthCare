@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Calendar } from "@/components/ui/calendar";
 import { Button } from "@/components/ui/button";
 import {
@@ -21,109 +21,114 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { addDays, format, isSameDay, startOfToday } from "date-fns";
+import { addDays, format, isSameDay } from "date-fns";
 import { Check, Clock } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-
-// Dummy data for doctors
-const doctors = [
-  { id: "dr-smith", name: "Dr. Smith", specialty: "Family Medicine" },
-  { id: "dr-johnson", name: "Dr. Johnson", specialty: "Cardiology" },
-  { id: "dr-williams", name: "Dr. Williams", specialty: "Dermatology" },
-  { id: "dr-brown", name: "Dr. Brown", specialty: "Pediatrics" },
-];
-
-// Generate time slots from 9 AM to 5 PM
-const generateTimeSlots = () => {
-  const slots = [];
-  for (let hour = 9; hour < 17; hour++) {
-    slots.push(`${hour}:00 ${hour < 12 ? "AM" : "PM"}`);
-  }
-  return slots;
-};
-
-// Generate available slots for the next 3 weeks
-const generateAvailableDays = () => {
-  const today = startOfToday();
-  const threeWeeksLater = addDays(today, 21);
-
-  // Randomly make some days unavailable
-  const availableDays = [];
-  let currentDay = today;
-
-  while (currentDay <= threeWeeksLater) {
-    // Skip weekends (6 = Saturday, 0 = Sunday)
-    if (currentDay.getDay() !== 0 && currentDay.getDay() !== 6) {
-      // Randomly determine if the day is available (80% chance)
-      if (Math.random() < 0.8) {
-        availableDays.push(new Date(currentDay));
-      }
-    }
-    currentDay = addDays(currentDay, 1);
-  }
-
-  return availableDays;
-};
-
-// Generate available time slots for a specific day and doctor
-const generateAvailableTimeSlots = (date: Date, doctorId: string) => {
-  const allTimeSlots = generateTimeSlots();
-
-  // Use a deterministic approach based on the date and doctor
-  // This ensures the same slots are shown for the same date/doctor combination
-  const dateString = date.toISOString().split("T")[0];
-  const seed = dateString + doctorId;
-
-  // Create a pseudo-random but deterministic set of available slots
-  return allTimeSlots.filter((_, index) => {
-    // Use a simple hash of the seed and index to determine availability
-    const charSum = seed
-      .split("")
-      .reduce((sum, char) => sum + char.charCodeAt(0), 0);
-    return (charSum + index) % 3 !== 0; // Make roughly 2/3 of slots available
-  });
-};
+import { useAppStore } from "@/stores/useAppStore";
+import { doctorBookedAppointments } from "@/utils/doctor";
+import { generateAvailableDays } from "@/utils/generateAvailableDays";
+import { generateAvailableTimeSlots } from "@/utils/generateTimeSlots";
+import { addAppointment } from "@/utils/api/appointment";
 
 export function AppointmentCalendar() {
+  const doctors = useAppStore((state) => state.doctors);
   const { toast } = useToast();
   const [date, setDate] = useState<Date | undefined>(undefined);
   const [doctor, setDoctor] = useState<string>("");
   const [timeSlot, setTimeSlot] = useState<string>("");
   const [reason, setReason] = useState<string>("");
   const [appointmentType, setAppointmentType] = useState<string>("in-person");
+  const [bookedAppointments, setBookedAppointments] = useState<
+    Array<{
+      appointmentID: number;
+      appointmentDate: string;
+      appointmentTime: string;
+    }>
+  >([]);
+  const [isLoading, setIsLoading] = useState(false);
 
-  const availableDays = generateAvailableDays();
+  useEffect(() => {
+    if (doctor) {
+      const fetchBookedAppointments = async () => {
+        setIsLoading(true);
+        try {
+          const data = await doctorBookedAppointments(Number(doctor));
+          setBookedAppointments(data);
+        } catch (error) {
+          toast({
+            title: "Error",
+            description: "Failed to load booked appointments.",
+            variant: "destructive",
+          });
+          setBookedAppointments([]);
+        } finally {
+          setIsLoading(false);
+        }
+      };
+      fetchBookedAppointments();
+    } else {
+      setBookedAppointments([]);
+    }
+  }, [doctor, toast]);
+
+  const selectedDoctor = doctors.find((d) => d.doctorID === Number(doctor));
+  const availableDays = generateAvailableDays(selectedDoctor?.serviceDays);
+  const availabilityTimes = selectedDoctor
+    ? selectedDoctor.availabilityTimes
+        .split("-")
+        .map((time) => parseInt(time.split(":")[0]))
+    : [9, 17];
   const availableTimeSlots =
-    date && doctor ? generateAvailableTimeSlots(date, doctor) : [];
+    date && doctor && availableDays.some((d) => isSameDay(d, date))
+      ? generateAvailableTimeSlots(
+          date,
+          bookedAppointments,
+          availabilityTimes[0],
+          availabilityTimes[1]
+        )
+      : [];
+  const isDateValid = date && availableDays.some((d) => isSameDay(d, date));
 
   const handleBookAppointment = () => {
-    if (!date || !doctor || !timeSlot) {
+    if (!date || !doctor || !timeSlot || !isDateValid) {
       toast({
         title: "Missing information",
-        description: "Please select a date, doctor, and time slot.",
+        description: "Please select a valid date, doctor, and time slot.",
         variant: "destructive",
       });
       return;
+    } else {
+      const formatedDate = date && format(date, "yyyy-MM-dd");
+      const [time, period] = timeSlot.split(" ");
+      const [hourStr, minute] = time.split(":");
+      let hour = parseInt(hourStr);
+      if (period === "PM" && hour !== 12) hour += 12;
+      if (period === "AM" && hour === 12) hour = 0;
+      const formatedTimeSlot = `${hour
+        .toString()
+        .padStart(2, "0")}:${minute}:00`;
+
+      addAppointment(
+        Number(doctor),
+        formatedDate,
+        formatedTimeSlot,
+        reason,
+        appointmentType
+      );
     }
 
-    // In a real app, this would send the data to the server
     toast({
       title: "Appointment booked!",
       description: `Your appointment with ${
-        doctors.find((d) => d.id === doctor)?.name
+        selectedDoctor?.fullName
       } on ${format(date, "MMMM d, yyyy")} at ${timeSlot} has been confirmed.`,
     });
-
-    // Set a timeout to redirect after showing the toast
-    setTimeout(() => {
-      window.location.href = "/dashboard/appointments";
-    }, 3000);
   };
 
   return (
     <div className='grid gap-6 lg:grid-cols-2'>
       <Card>
-        <CardHeader>
+        <CardHeader className='text-center'>
           <CardTitle>Select Appointment Date</CardTitle>
           <CardDescription>
             Choose a date within the next 3 weeks
@@ -135,7 +140,6 @@ export function AppointmentCalendar() {
             selected={date}
             onSelect={setDate}
             disabled={(date) => {
-              // Disable dates that are not in the available days list
               return !availableDays.some((availableDate) =>
                 isSameDay(availableDate, date)
               );
@@ -162,17 +166,25 @@ export function AppointmentCalendar() {
                 value={doctor}
                 onValueChange={(value) => {
                   setDoctor(value);
-                  setTimeSlot(""); // Reset time slot when doctor changes
+                  setTimeSlot("");
                 }}>
                 <SelectTrigger id='doctor'>
                   <SelectValue placeholder='Choose a doctor' />
                 </SelectTrigger>
                 <SelectContent>
-                  {doctors.map((doc) => (
-                    <SelectItem key={doc.id} value={doc.id}>
-                      {doc.name} - {doc.specialty}
-                    </SelectItem>
-                  ))}
+                  {doctors.length > 0 ? (
+                    doctors.map((doc) => (
+                      <SelectItem
+                        key={doc.doctorID}
+                        value={String(doc.doctorID)}>
+                        {doc.fullName} - {doc.specialty}
+                      </SelectItem>
+                    ))
+                  ) : (
+                    <div className='p-2 text-sm text-muted-foreground'>
+                      No doctors available
+                    </div>
+                  )}
                 </SelectContent>
               </Select>
             </div>
@@ -180,9 +192,22 @@ export function AppointmentCalendar() {
             {date && doctor && (
               <div className='space-y-2'>
                 <Label htmlFor='time-slot'>Available Time Slots</Label>
-                <div className='grid grid-cols-2 gap-2'>
-                  {availableTimeSlots.length > 0 ? (
-                    availableTimeSlots.map((slot) => (
+                {isLoading ? (
+                  <p className='text-sm text-muted-foreground'>
+                    Loading time slots...
+                  </p>
+                ) : !isDateValid ? (
+                  <p className='text-sm text-muted-foreground'>
+                    Please select a date from the doctor's service days (
+                    {selectedDoctor?.serviceDays
+                      .split(",")
+                      .map((day) => day.trim())
+                      .join(", ")}
+                    )
+                  </p>
+                ) : availableTimeSlots.length > 0 ? (
+                  <div className='grid grid-cols-2 gap-2'>
+                    {availableTimeSlots.map((slot) => (
                       <Button
                         key={slot}
                         type='button'
@@ -195,13 +220,13 @@ export function AppointmentCalendar() {
                           <Check className='ml-auto h-4 w-4' />
                         )}
                       </Button>
-                    ))
-                  ) : (
-                    <p className='col-span-2 text-sm text-muted-foreground'>
-                      No available time slots for this date and doctor.
-                    </p>
-                  )}
-                </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className='text-sm text-muted-foreground'>
+                    No available time slots for this date and doctor.
+                  </p>
+                )}
               </div>
             )}
 
@@ -239,7 +264,9 @@ export function AppointmentCalendar() {
           <CardFooter>
             <Button
               onClick={handleBookAppointment}
-              disabled={!date || !doctor || !timeSlot}
+              disabled={
+                !date || !doctor || !timeSlot || !isDateValid || isLoading
+              }
               className='w-full'>
               Book Appointment
             </Button>
@@ -247,7 +274,7 @@ export function AppointmentCalendar() {
         </Card>
       )}
 
-      {date && doctor && timeSlot && (
+      {date && doctor && timeSlot && isDateValid && (
         <Card>
           <CardHeader>
             <CardTitle>Appointment Summary</CardTitle>
@@ -264,7 +291,7 @@ export function AppointmentCalendar() {
               </div>
               <div className='flex justify-between'>
                 <span className='font-medium'>Doctor:</span>
-                <span>{doctors.find((d) => d.id === doctor)?.name}</span>
+                <span>{selectedDoctor?.fullName}</span>
               </div>
               <div className='flex justify-between'>
                 <span className='font-medium'>Type:</span>

@@ -6,8 +6,18 @@ import { ThemeToggle } from "@/components/theme-toggle";
 import { Heart } from "lucide-react";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
+import { useAppStore } from "@/stores/useAppStore";
+import { logout } from "@/utils/auth/logout";
+import { Avatar, AvatarFallback, AvatarImage } from "@radix-ui/react-avatar";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 export function Navbar() {
+  const user = useAppStore((state) => state.user);
   const pathname = usePathname();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
 
@@ -55,12 +65,45 @@ export function Navbar() {
         <div className='flex items-center gap-4'>
           <ThemeToggle />
           <div className='hidden md:flex gap-2'>
-            <Link href='/signin'>
-              <Button variant='outline'>Log in</Button>
-            </Link>
-            <Link href='/signup'>
-              <Button>Sign up</Button>
-            </Link>
+            {user ? (
+              <div className='flex items-center gap-3'>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Avatar className='cursor-pointer'>
+                      <AvatarImage
+                        className='h-8 w-8 rounded-full'
+                        src={user.profilePic}
+                        alt={user.fullName}
+                      />
+                      <AvatarFallback>{user.fullName.charAt(0)}</AvatarFallback>
+                    </Avatar>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align='end'>
+                    <DropdownMenuItem asChild>
+                      <Link href='/appointments'>Book Appointment</Link>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem asChild>
+                      <Link href='/dashboard'>Dashboard</Link>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      onClick={() => {
+                        logout("user");
+                      }}>
+                      Logout
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </div>
+            ) : (
+              <>
+                <Link href='/signin'>
+                  <Button variant='outline'>Log in</Button>
+                </Link>
+                <Link href='/signup'>
+                  <Button>Sign up</Button>
+                </Link>
+              </>
+            )}
           </div>
 
           {/* Mobile Menu Button */}
@@ -139,14 +182,49 @@ export function Navbar() {
               Contact
             </Link>
             <div className='flex flex-col gap-2 pt-2'>
-              <Link href='/signin' onClick={() => setIsMenuOpen(false)}>
-                <Button variant='outline' className='w-full'>
-                  Sign in
-                </Button>
-              </Link>
-              <Link href='/signup' onClick={() => setIsMenuOpen(false)}>
-                <Button className='w-full'>Sign up</Button>
-              </Link>
+              {user ? (
+                <div className='flex items-center gap-3'>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Avatar className='cursor-pointer'>
+                        <AvatarImage
+                          className='h-8 w-8 rounded-full'
+                          src={user.profilePic}
+                          alt={user.fullName}
+                        />
+                        <AvatarFallback>
+                          {user.fullName.charAt(0)}
+                        </AvatarFallback>
+                      </Avatar>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align='end'>
+                      <DropdownMenuItem asChild>
+                        <Link href='/appointments'>Book Appointment</Link>
+                      </DropdownMenuItem>
+                      <DropdownMenuItem asChild>
+                        <Link href='/dashboard'>Dashboard</Link>
+                      </DropdownMenuItem>
+                      <DropdownMenuItem
+                        onClick={() => {
+                          logout("user");
+                        }}>
+                        Logout
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </div>
+              ) : (
+                <>
+                  <Link href='/signin' onClick={() => setIsMenuOpen(false)}>
+                    <Button variant='outline' className='w-full'>
+                      Log in
+                    </Button>
+                  </Link>
+                  <Link href='/signup' onClick={() => setIsMenuOpen(false)}>
+                    <Button className='w-full'>Sign up</Button>
+                  </Link>
+                </>
+              )}
             </div>
           </nav>
         </div>
