@@ -23,6 +23,14 @@ export interface Appointment {
   updatedAt: string;
 }
 
+export interface RescheduleAppointment {
+  appointmentStatus: "rescheduled";
+  rescheduleDate: string;
+  rescheduleTime: string;
+  rescheduleReason: string;
+  rescheduleNotes: string | null;
+}
+
 export async function fetchPatientAppointments(): Promise<Appointment[]> {
   const { user } = useAppStore.getState();
   if (!user) throw new Error("User not found");
@@ -91,15 +99,25 @@ export async function cancelAppointment(
 }
 
 export async function rescheduleAppointment(
-  appointmentID: number
+  appointmentID: number,
+  rescheduleData: RescheduleAppointment
 ): Promise<void> {
   try {
-    const updatedData = {
-      appointmentStatus: "recheduled",
-      cancellationReason: "Patient recheduled it willingly",
-    };
-
-    await axios.put(`/Appointment/${appointmentID}`, updatedData);
+    await axios.patch(
+      `/Appointment/reschedule/${appointmentID}`,
+      rescheduleData
+    );
+    if (rescheduleData.rescheduleNotes) {
+      await axios.patch(
+        `/Appointment/notes/${appointmentID}`,
+        `"${rescheduleData.rescheduleNotes}"`,
+        {
+          headers: {
+            "Content-Type": "application/json",
+          },
+        }
+      );
+    }
     usePatientStore.getState().refreshPatientAppointments();
     useAppStore.getState().refreshAppointments();
   } catch (error: any) {

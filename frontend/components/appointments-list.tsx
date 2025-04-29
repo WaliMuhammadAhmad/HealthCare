@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -27,11 +27,29 @@ import {
   Phone,
   MapPin,
   AlertCircle,
+  ArrowRight,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { cancelAppointment } from "@/utils/api/appointment";
+import {
+  cancelAppointment,
+  rescheduleAppointment,
+  RescheduleAppointment,
+} from "@/utils/api/appointment";
 import { formatDate } from "@/utils/formatDate";
 import { usePatientStore } from "@/stores/usePatientStore";
+import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
+import { doctorBookedAppointments } from "@/utils/doctor";
+import { generateAvailableTimeSlots } from "@/utils/generateTimeSlots";
+import { useAppStore } from "@/stores/useAppStore";
 
 export function AppointmentsList() {
   const { toast } = useToast();
@@ -42,8 +60,28 @@ export function AppointmentsList() {
   >(null);
   const [cancelDialog, setCancelDialog] = useState(false);
 
+  const [rescheduleDialog, setRescheduleDialog] = useState(false);
+  const [rescheduleDate, setRescheduleDate] = useState<string>("");
+  const [rescheduleTime, setRescheduleTime] = useState<string>("");
+  const [rescheduleReason, setRescheduleReason] = useState<string>("");
+  const [rescheduleNotes, setRescheduleNotes] = useState<string>("");
+
+  const [bookedAppointments, setBookedAppointments] = useState<
+    Array<{
+      appointmentID: number;
+      appointmentDate: string;
+      appointmentTime: string;
+    }>
+  >([]);
+  const [availableTimeSlots, setAvailableTimeSlots] = useState<string[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+
+  const doctors = useAppStore((state) => state.doctors);
+
   const upcomingAppointments = appointments.filter(
-    (apt) => apt.appointmentStatus === "scheduled"
+    (apt) =>
+      apt.appointmentStatus === "scheduled" ||
+      apt.appointmentStatus === "rescheduled"
   );
   const pastAppointments = appointments.filter(
     (apt) => apt.appointmentStatus === "completed"
@@ -78,77 +116,248 @@ export function AppointmentsList() {
     setSelectedAppointment(null);
   };
 
-  const renderAppointmentCard = (appointment: (typeof appointments)[0]) => (
-    <Card key={String(appointment.appointmentID)} className='mb-4'>
-      <CardHeader className='pb-2'>
-        <div className='flex justify-between items-start'>
-          <div>
-            <CardTitle>{appointment.doctorName}</CardTitle>
-            <CardDescription>{appointment.specialty}</CardDescription>
+  const handleRescheduleAppointment = async () => {
+    if (
+      !selectedAppointment ||
+      !rescheduleDate ||
+      !rescheduleTime ||
+      !rescheduleReason
+    ) {
+      toast({
+        title: "Missing information",
+        description: "Please fill in all required fields.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      const updatedData: RescheduleAppointment = {
+        appointmentStatus: "rescheduled",
+        rescheduleDate,
+        rescheduleTime,
+        rescheduleReason,
+        rescheduleNotes,
+      };
+
+      await rescheduleAppointment(
+        selectedAppointment.appointmentID,
+        updatedData
+      );
+
+      toast({
+        title: "Appointment rescheduled",
+        description: `Your appointment with ${
+          selectedAppointment.doctorName
+        } has been rescheduled to ${formatDate(
+          rescheduleDate
+        )} at ${rescheduleTime}.`,
+      });
+
+      setRescheduleDialog(false);
+      setSelectedAppointment(null);
+      // Reset form fields
+      setRescheduleDate("");
+      setRescheduleTime("");
+      setRescheduleReason("");
+      setRescheduleNotes("");
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to reschedule appointment",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const renderAppointmentCard = (appointment: (typeof appointments)[0]) => {
+    const isRescheduled =
+      appointment.rescheduleDate && appointment.rescheduleTime;
+
+    return (
+      <Card
+        key={String(appointment.appointmentID)}
+        className={`mb-4 ${isRescheduled ? "border-amber-400" : ""}`}>
+        <CardHeader className='pb-2'>
+          <div className='flex justify-between items-start'>
+            <div>
+              <CardTitle>{appointment.doctorName}</CardTitle>
+              <CardDescription>{appointment.specialty}</CardDescription>
+            </div>
+            <Badge
+              variant={
+                isRescheduled
+                  ? "outline"
+                  : appointment.appointmentStatus === "completed"
+                  ? "secondary"
+                  : "default"
+              }
+              className={
+                isRescheduled
+                  ? "border-amber-400 text-amber-600 bg-amber-50"
+                  : ""
+              }>
+              {isRescheduled
+                ? "Rescheduled"
+                : appointment.appointmentStatus === "scheduled"
+                ? "Upcoming"
+                : "Completed"}
+            </Badge>
           </div>
-          <Badge
-            variant={
-              appointment.appointmentStatus === "completed"
-                ? "secondary"
-                : "default"
-            }>
-            {appointment.appointmentStatus === "scheduled"
-              ? "Upcoming"
-              : "Completed"}
-          </Badge>
-        </div>
-      </CardHeader>
-      <CardContent>
-        <div className='space-y-2'>
-          <div className='flex items-center text-sm'>
-            <Calendar className='h-4 w-4 mr-1' />
-            <span>{formatDate(appointment.appointmentDate)}</span>
-            <span className='mx-2'>•</span>
-            <Clock className='h-4 w-4 mr-1' />
-            <span>{appointment.appointmentTime}</span>
+        </CardHeader>
+        <CardContent>
+          <div className='space-y-2'>
+            {isRescheduled ? (
+              <>
+                <div className='flex items-start text-sm'>
+                  <div className='flex items-center'>
+                    <Calendar className='h-4 w-4 mr-1 text-muted-foreground' />
+                    <span className='text-muted-foreground line-through'>
+                      {formatDate(appointment.appointmentDate)}
+                    </span>
+                    <span className='mx-2 text-muted-foreground'>•</span>
+                    <Clock className='h-4 w-4 mr-1 text-muted-foreground' />
+                    <span className='text-muted-foreground line-through'>
+                      {appointment.appointmentTime}
+                    </span>
+                  </div>
+                  <ArrowRight className='mx-2 h-4 w-4 text-amber-500' />
+                  <div className='flex items-center'>
+                    <Calendar className='h-4 w-4 mr-1' />
+                    <span className='font-medium'>
+                      {formatDate(appointment.rescheduleDate || "")}
+                    </span>
+                    <span className='mx-2'>•</span>
+                    <Clock className='h-4 w-4 mr-1' />
+                    <span className='font-medium'>
+                      {appointment.rescheduleTime}
+                    </span>
+                  </div>
+                </div>
+                <div className='text-sm bg-amber-50 p-2 rounded-md border border-amber-200'>
+                  <span className='font-medium text-amber-700'>
+                    Reason for reschedule:
+                  </span>{" "}
+                  <span className='text-sm text-amber-600'>
+                    {appointment.rescheduleReason}
+                  </span>
+                </div>
+              </>
+            ) : (
+              <div className='flex items-center text-sm'>
+                <Calendar className='h-4 w-4 mr-1' />
+                <span>{formatDate(appointment.appointmentDate)}</span>
+                <span className='mx-2'>•</span>
+                <Clock className='h-4 w-4 mr-1' />
+                <span>{appointment.appointmentTime}</span>
+              </div>
+            )}
+            <div className='flex items-center text-sm'>
+              {getAppointmentTypeIcon(appointment.appointmentType)}
+              <span className='capitalize'>
+                {appointment.appointmentType.replace("-", " ")} appointment
+              </span>
+            </div>
+            {appointment.notes && (
+              <div className='text-sm text-muted-foreground'>
+                {appointment.notes}
+              </div>
+            )}
           </div>
-          <div className='flex items-center text-sm'>
-            {getAppointmentTypeIcon(appointment.appointmentType)}
-            <span className='capitalize'>
-              {appointment.appointmentType.replace("-", " ")} appointment
-            </span>
+        </CardContent>
+        <CardFooter>
+          <div className='flex justify-end w-full space-x-2'>
+            {(appointment.appointmentStatus === "scheduled" ||
+              appointment.appointmentStatus === "rescheduled") && (
+              <>
+                <Button
+                  variant='outline'
+                  size='sm'
+                  onClick={() => {
+                    setSelectedAppointment(appointment);
+                    setCancelDialog(true);
+                  }}>
+                  Cancel
+                </Button>
+                <Button
+                  variant='outline'
+                  size='sm'
+                  onClick={() => {
+                    setSelectedAppointment(appointment);
+                    setRescheduleDialog(true);
+                  }}>
+                  Reschedule
+                </Button>
+              </>
+            )}
+            <Button
+              variant='default'
+              size='sm'
+              onClick={() => setSelectedAppointment(appointment)}>
+              Details
+            </Button>
           </div>
-          <div className='text-sm text-muted-foreground'>
-            {appointment.notes}
-          </div>
-        </div>
-      </CardContent>
-      <CardFooter>
-        <div className='flex justify-end w-full space-x-2'>
-          {appointment.appointmentStatus === "scheduled" && (
-            <>
-              <Button
-                variant='outline'
-                size='sm'
-                onClick={() => {
-                  setSelectedAppointment(appointment);
-                  setCancelDialog(true);
-                }}>
-                Cancel
-              </Button>
-              <Button
-                variant='outline'
-                size='sm'
-                onClick={() => setSelectedAppointment(appointment)}>
-                Reschedule
-              </Button>
-            </>
-          )}
-          <Button
-            variant='default'
-            size='sm'
-            onClick={() => setSelectedAppointment(appointment)}>
-            Details
-          </Button>
-        </div>
-      </CardFooter>
-    </Card>
-  );
+        </CardFooter>
+      </Card>
+    );
+  };
+
+  useEffect(() => {
+    if (rescheduleDialog && selectedAppointment) {
+      const fetchBookedAppointments = async () => {
+        setIsLoading(true);
+        try {
+          // Find the doctor ID by matching name and specialty
+          const doctor = doctors.find(
+            (doc) =>
+              doc.fullName === selectedAppointment.doctorName &&
+              doc.specialty === selectedAppointment.specialty
+          );
+
+          if (!doctor) {
+            toast({
+              title: "Error",
+              description: "Could not find doctor information.",
+              variant: "destructive",
+            });
+            setBookedAppointments([]);
+            setIsLoading(false);
+            return;
+          }
+
+          const data = await doctorBookedAppointments(doctor.doctorID);
+          setBookedAppointments(data);
+        } catch (error) {
+          toast({
+            title: "Error",
+            description: "Failed to load booked appointments.",
+            variant: "destructive",
+          });
+          setBookedAppointments([]);
+        } finally {
+          setIsLoading(false);
+        }
+      };
+      fetchBookedAppointments();
+    }
+  }, [rescheduleDialog, selectedAppointment, doctors, toast]);
+
+  useEffect(() => {
+    if (rescheduleDate && selectedAppointment) {
+      // Assuming the doctor works from 9 AM to 5 PM
+      // You might want to get this from the doctor's data if available
+      const availabilityTimes = [9, 17];
+      const slots = generateAvailableTimeSlots(
+        new Date(rescheduleDate),
+        bookedAppointments,
+        availabilityTimes[0],
+        availabilityTimes[1]
+      );
+      setAvailableTimeSlots(slots);
+    } else {
+      setAvailableTimeSlots([]);
+    }
+  }, [rescheduleDate, bookedAppointments, selectedAppointment]);
 
   return (
     <>
@@ -314,6 +523,140 @@ export function AppointmentsList() {
                 }
               }}>
               Cancel Appointment
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Reschedule Appointment Dialog */}
+      <Dialog open={rescheduleDialog} onOpenChange={setRescheduleDialog}>
+        <DialogContent className='sm:max-w-[500px]'>
+          <DialogHeader>
+            <DialogTitle>Reschedule Appointment</DialogTitle>
+            <DialogDescription>
+              Please select a new date and time for your appointment.
+            </DialogDescription>
+          </DialogHeader>
+
+          {selectedAppointment && (
+            <div className='py-4'>
+              <div className='flex flex-col space-y-2 rounded-lg border p-4 mb-4'>
+                <div>
+                  <h4 className='font-medium'>Current Appointment</h4>
+                  <p className='text-sm font-medium'>
+                    {selectedAppointment.doctorName}
+                  </p>
+                  <p className='text-sm text-muted-foreground'>
+                    {selectedAppointment.specialty}
+                  </p>
+                </div>
+                <div className='flex items-center text-sm'>
+                  <Calendar className='mr-1 h-4 w-4' />
+                  <span>{formatDate(selectedAppointment.appointmentDate)}</span>
+                  <span className='mx-2'>•</span>
+                  <Clock className='mr-1 h-4 w-4' />
+                  <span>{selectedAppointment.appointmentTime}</span>
+                </div>
+                <div className='flex items-center text-sm'>
+                  {getAppointmentTypeIcon(selectedAppointment.appointmentType)}
+                  <span className='capitalize'>
+                    {selectedAppointment.appointmentType.replace("-", " ")}{" "}
+                    appointment
+                  </span>
+                </div>
+              </div>
+
+              <div className='space-y-4'>
+                <div className='space-y-2'>
+                  <Label htmlFor='reschedule-date'>New Date</Label>
+                  <Input
+                    id='reschedule-date'
+                    type='date'
+                    value={rescheduleDate}
+                    onChange={(e) => setRescheduleDate(e.target.value)}
+                    min={new Date().toISOString().split("T")[0]}
+                    required
+                  />
+                </div>
+
+                <div className='space-y-2'>
+                  <Label htmlFor='reschedule-time'>New Time</Label>
+                  <Select
+                    value={rescheduleTime}
+                    onValueChange={setRescheduleTime}>
+                    <SelectTrigger id='reschedule-time'>
+                      <SelectValue placeholder='Select a time' />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {isLoading ? (
+                        <SelectItem value='loading' disabled>
+                          Loading time slots...
+                        </SelectItem>
+                      ) : availableTimeSlots.length > 0 ? (
+                        availableTimeSlots.map((slot) => {
+                          // Convert from "9:00 AM" format to "09:00:00" format for the backend
+                          const [time, period] = slot.split(" ");
+                          const [hourStr, minute] = time.split(":");
+                          let hour = Number.parseInt(hourStr);
+                          if (period === "PM" && hour !== 12) hour += 12;
+                          if (period === "AM" && hour === 12) hour = 0;
+                          const formattedTime = `${hour
+                            .toString()
+                            .padStart(2, "0")}:${minute}:00`;
+
+                          return (
+                            <SelectItem key={slot} value={formattedTime}>
+                              {slot}
+                            </SelectItem>
+                          );
+                        })
+                      ) : (
+                        <SelectItem value='no-slots' disabled>
+                          No available time slots
+                        </SelectItem>
+                      )}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className='space-y-2'>
+                  <Label htmlFor='reschedule-reason'>
+                    Reason for Rescheduling
+                  </Label>
+                  <Textarea
+                    id='reschedule-reason'
+                    placeholder='Please provide a reason for rescheduling this appointment...'
+                    value={rescheduleReason}
+                    onChange={(e) => setRescheduleReason(e.target.value)}
+                    className='min-h-[80px]'
+                    required
+                  />
+                </div>
+
+                <div className='space-y-2'>
+                  <Label htmlFor='reschedule-notes'>
+                    Additional Notes (Optional)
+                  </Label>
+                  <Textarea
+                    id='reschedule-notes'
+                    placeholder='Any additional information for your healthcare provider...'
+                    value={rescheduleNotes}
+                    onChange={(e) => setRescheduleNotes(e.target.value)}
+                    className='min-h-[80px]'
+                  />
+                </div>
+              </div>
+            </div>
+          )}
+
+          <DialogFooter>
+            <Button
+              variant='outline'
+              onClick={() => setRescheduleDialog(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleRescheduleAppointment}>
+              Confirm Reschedule
             </Button>
           </DialogFooter>
         </DialogContent>
