@@ -1,41 +1,10 @@
-"use client";
 import type React from "react";
-import "@/app/globals.css";
-import { ThemeProvider } from "@/components/theme-provider";
-import { useAppStore } from "@/stores/useAppStore";
-import { Inter } from "next/font/google";
-
-const inter = Inter({ subsets: ["latin"] });
+import ClientLayout from "./ClientLayout";
 
 export default function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  const initializeData = useAppStore((state) => state.initializeData);
-  const initializePatientData = usePatientStore(
-    (state) => state.initializeData
-  );
-  useEffect(() => {
-    initializeData();
-    initializePatientData();
-  }, []);
-
-  return (
-    <html lang='en' suppressHydrationWarning>
-      <body className={inter.className}>
-        <ThemeProvider
-          attribute='class'
-          defaultTheme='system'
-          enableSystem
-          disableTransitionOnChange>
-          {children}
-        </ThemeProvider>
-      </body>
-    </html>
-  );
+  return <ClientLayout>{children}</ClientLayout>;
 }
-
-import "./globals.css";
-import { useEffect } from "react";
-import { usePatientStore } from "@/stores/usePatientStore";
